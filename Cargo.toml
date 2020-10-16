@@ -1,0 +1,2 @@
+[workspace]
+members = ["better_typeid", "better_typeid_derive"]

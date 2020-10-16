@@ -1,0 +1,20 @@
+[package]
+name = "better_typeid"
+version = "0.1.0"
+authors = ["Konstantin Anisimov <rrevenantt@gmail.com>"]
+homepage = "https://github.com/rrevenantt/better_typeid"
+repository = "https://github.com/rrevenantt/better_typeid"
+license = "MIT OR Apache-2.0"
+description = "Type id and Any for non static types"
+readme = "README.md"
+keywords = ["Any", "TypeId", "downcast","dynamic dispatch"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+better_typeid_derive = {path="../better_typeid_derive" }
+
+[dev-dependencies]
+trybuild = "=1.0"
+macrotest = "=1.0"
