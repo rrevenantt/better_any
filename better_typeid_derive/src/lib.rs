@@ -3,66 +3,57 @@ use proc_macro::TokenStream;
 
 use quote::quote;
 use syn::export::ToTokens;
-use syn::parse::Parse;
-use syn::{
-    parse2, Generics, PredicateType, Token, TraitBound, TraitBoundModifier, Type, TypeParamBound,
-    WherePredicate,
-};
+use syn::{parse2, Generics, Type, TypeParamBound};
 
 use proc_macro2::Ident;
-use std::mem;
-use syn::parse_macro_input::parse;
-use syn::punctuated::Punctuated;
-use syn::token::Token;
-use syn::visit_mut::{visit_predicate_type_mut, VisitMut};
 use syn::{
-    parse_macro_input, ConstParam, Data, DataStruct, DeriveInput, Error, GenericParam, ItemImpl,
-    Lifetime, LifetimeDef, TypeImplTrait, TypeParam,
+    parse_macro_input, ConstParam, DeriveInput, GenericParam, ItemImpl, Lifetime, LifetimeDef,
+    TypeParam,
 };
 
-struct RenameLifetimeVisitor;
-impl VisitMut for RenameLifetimeVisitor {
-    // change all lifetimes to 'static
-    fn visit_lifetime_mut(&mut self, i: &mut Lifetime) {
-        let span = i.ident.span();
-        mem::replace(&mut i.ident, Ident::new("static", span));
-    }
+// struct RenameLifetimeVisitor;
+// impl VisitMut for RenameLifetimeVisitor {
+//     // change all lifetimes to 'static
+//     fn visit_lifetime_mut(&mut self, i: &mut Lifetime) {
+//         let span = i.ident.span();
+//         mem::replace(&mut i.ident, Ident::new("static", span));
+//     }
+//
+//     // remove ?Sized bound
+//     fn visit_predicate_type_mut(&mut self, i: &mut PredicateType) {
+//         visit_predicate_type_mut(self, i);
+//         let mut new_pred = i.clone();
+//         let new_bounds = i
+//             .bounds
+//             .iter()
+//             .filter(|&it| {
+//                 if let TypeParamBound::Trait(TraitBound {
+//                     modifier: TraitBoundModifier::Maybe(_),
+//                     ..
+//                 }) = it
+//                 {
+//                     false
+//                 } else {
+//                     true
+//                 }
+//             })
+//             .cloned()
+//             .collect();
+//         mem::replace(&mut new_pred.bounds, new_bounds);
+//     }
+// }
 
-    // remove ?Sized bound
-    fn visit_predicate_type_mut(&mut self, i: &mut PredicateType) {
-        visit_predicate_type_mut(self, i);
-        let mut new_pred = i.clone();
-        let new_bounds = i
-            .bounds
-            .iter()
-            .filter(|&it| {
-                if let TypeParamBound::Trait(TraitBound {
-                    modifier: TraitBoundModifier::Maybe(_),
-                    ..
-                }) = it
-                {
-                    false
-                } else {
-                    true
-                }
-            })
-            .cloned()
-            .collect();
-        mem::replace(&mut new_pred.bounds, new_bounds);
-    }
-}
-
-fn is_sized(bound: &TypeParamBound) -> bool {
-    if let TypeParamBound::Trait(TraitBound {
-        modifier: TraitBoundModifier::Maybe(_),
-        ..
-    }) = bound
-    {
-        false
-    } else {
-        true
-    }
-}
+// fn is_sized(bound: &TypeParamBound) -> bool {
+//     if let TypeParamBound::Trait(TraitBound {
+//         modifier: TraitBoundModifier::Maybe(_),
+//         ..
+//     }) = bound
+//     {
+//         false
+//     } else {
+//         true
+//     }
+// }
 
 fn is_static(bound: &TypeParamBound) -> bool {
     if let TypeParamBound::Lifetime(Lifetime { ident, .. }) = bound {
@@ -93,16 +84,11 @@ pub fn my_derive(input: TokenStream) -> TokenStream {
         quote! { #ident<#(#type_params),*> }
     };
     let type_ = parse2(type_).unwrap();
-    create_impl(
-        generics,
-        Box::new(type_),
-        Some(quote::format_ident!("better_typeid")),
-    )
-    .into()
+    create_impl(generics, Box::new(type_), None).into()
 }
 
 fn create_impl(
-    mut generics: Generics,
+    generics: Generics,
     type_: Box<Type>,
     hlq: Option<Ident>,
 ) -> proc_macro2::TokenStream {
@@ -191,7 +177,9 @@ fn create_impl(
             }
         }
     };
-    // panic!(tokens.to_string());
+
+    // need to use separate struct becaus if we use original struct,
+    // we have to forward all bounds
     let tokens = quote! {
         #tokens
         #[allow(warnings)]
@@ -204,7 +192,7 @@ fn create_impl(
 }
 
 #[proc_macro_attribute]
-pub fn impl_tid(params: TokenStream, input: TokenStream) -> TokenStream {
+pub fn impl_tid(_params: TokenStream, input: TokenStream) -> TokenStream {
     if let ItemImpl {
         attrs,
         defaultness: None,

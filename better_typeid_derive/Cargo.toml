@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["Konstantin Anisimov <rrevenantt@gmail.com>"]
 description = "derive macro part of better_typeid"
 keywords = ["template", "proc_macro", "procmacro"]
+license = "MIT OR Apache-2.0"
 edition = "2018"
 
 [lib]
@@ -12,5 +13,5 @@ proc-macro = true
 [dependencies]
 quote = "1"
 proc-macro2 = "1.0"
-syn = { version="1.0", features=["full","visit-mut"] }
+syn = { version="1.0", features=["full"] }
 

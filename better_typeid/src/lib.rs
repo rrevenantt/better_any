@@ -1,3 +1,5 @@
+#![warn(missing_docs)]
+#![warn(rust_2018_idioms)]
 //! # Better type Id
 //!
 //! Rust RFC for `non_static_type_id` feature has been reverted.
@@ -13,6 +15,8 @@
 //! Also it has better downcasting that allows you do downcast not just from `dyn Tid` (like `dyn Any`) but from
 //! any trait object that implements `Tid`.
 //! So there is no more need to extend your traits with` fn to_any(&self)-> &dyn Any`
+//!
+//! MSRV: `1.41.0-stable`
 //!
 //! ### Usage
 //!
@@ -82,8 +86,8 @@ pub use better_typeid_derive::Tid;
 /// Other traits are mostly just blanket implementations over X:TidAble<'a>
 ///
 /// Note that this trait interfere with object safety, so you shouldn't use it as a super trait
-/// if you are going to make a trait object.
-/// Technically it is object safe, but you can't make a trait object from it without specifying internal associate type
+/// if you are going to make a trait object. Formally it is still object safe,
+/// but you can't make a trait object from it without specifying internal associate type
 /// like: `dyn TidAble<'a,Static=SomeType>` which make this trait object effectively useless.
 ///
 /// Unsafe because safety of this crate relies on correctness of this trait implementation.
@@ -92,30 +96,33 @@ pub use better_typeid_derive::Tid;
 ///  - `type_id` declarative macro
 ///  - `impl_tid` attribute macro
 // we need to have associate type because it allows TypeIdAdjuster to be a private type
-// and allows to implement it for other trait objects
+// and allows to implement it for generic types
+// it has lifetime and depends on Tid because it would be practically useless as a standalone trait
+// because even though user would be able to get type id for more types,
+// any action based on it would be unsound without checking on lifetimes
 pub unsafe trait TidAble<'a>: Tid<'a> {
     /// Implementation detail
     #[doc(hidden)]
     type Static: ?Sized + Any;
 }
 
-/// Contains extension methods for actual downcasting.
+/// Extension trait that contains actual downcasting methods.
 ///
 /// Use methods from this trait only if `dyn Tid` was created directly from `T` for this particular `T`
 pub trait TidExt<'a> {
-    /// Use it only if `dyn Tid` was created directly from `T` for this particular `T`
-    fn downcast_ref<'b, T: Tid<'a>>(&'b self) -> Option<&'b T>
-    where
-        'a: 'b;
+    /// Attempts to downcast self to `T` behind reference
+    fn downcast_ref<'b, T: Tid<'a>>(&'b self) -> Option<&'b T>;
 
-    fn downcast_mut<'b, T: Tid<'a>>(&'b mut self) -> Option<&'b mut T>
-    where
-        'a: 'b;
+    /// Attempts to downcast self to `T` behind mutable reference
+    fn downcast_mut<'b, T: Tid<'a>>(&'b mut self) -> Option<&'b mut T>;
 
+    /// Attempts to downcast self to `T` behind `Rc` pointer
     fn downcast_rc<T: Tid<'a>>(self: Rc<Self>) -> Result<Rc<T>, Rc<Self>>;
 
+    /// Attempts to downcast self to `T` behind `Arc` pointer
     fn downcast_arc<T: Tid<'a>>(self: Arc<Self>) -> Result<Arc<T>, Arc<Self>>;
 
+    /// Attempts to downcast self to `T` behind `Box` pointer
     fn downcast_box<T: Tid<'a>>(self: Box<Self>) -> Result<Box<T>, Box<Self>>;
 }
 
@@ -125,10 +132,7 @@ pub trait TidExt<'a> {
 /// but sometimes it can be the only way.
 impl<'a, X: ?Sized + Tid<'a>> TidExt<'a> for X {
     #[inline]
-    fn downcast_ref<'b, T: Tid<'a>>(&'b self) -> Option<&'b T>
-    where
-        'a: 'b,
-    {
+    fn downcast_ref<'b, T: Tid<'a>>(&'b self) -> Option<&'b T> {
         // Tid<'a> is implemented only for types with lifetime 'a
         // so we can safely cast type back because lifetime invariant is preserved.
         if self.self_id() == T::id() {
@@ -139,10 +143,7 @@ impl<'a, X: ?Sized + Tid<'a>> TidExt<'a> for X {
     }
 
     #[inline]
-    fn downcast_mut<'b, T: Tid<'a>>(&'b mut self) -> Option<&'b mut T>
-    where
-        'a: 'b,
-    {
+    fn downcast_mut<'b, T: Tid<'a>>(&'b mut self) -> Option<&'b mut T> {
         // see downcast_ref
         if self.self_id() == T::id() {
             Some(unsafe { &mut *(self as *mut _ as *mut T) })
@@ -255,54 +256,17 @@ impl<'a: 'b, 'b> From<&'b mut dyn Any> for &'b mut (dyn Tid<'a> + 'a) {
     }
 }
 
-// this reverse is not possible even for 'static
-// because otherwise drop could have been called after the end of lifetime
-// and even for 'static it is not possible because it would allow to go from
-// `dyn Tid<'a> + 'static` to `dyn Tid<'a> + 'a` which is effectively shortens invariant lifetime
-// and it is a problem if initial struct is contravariant over lifetime
-// impl From<Box<dyn Any>> for Box<dyn Tid<'a> + 'static> {
-//     fn from(f: Box<dyn Any>) -> Self {
-//         unsafe { core::mem::transmute(f) }
-//     }
-// }
+// Reverse is possible only for 'static
+// because otherwise even though user can't access type with lifetime because of different type id
+// drop still can be called after the end of lifetime.
+impl Into<Box<dyn Any>> for Box<dyn Tid<'static>> {
+    fn into(self) -> Box<dyn Any> {
+        unsafe { core::mem::transmute(self) }
+    }
+}
 
 //wrapper to distinguish type ids coming from `dyn Any` and `dyn Tid`
 struct TypeIdAdjuster<T: ?Sized>(PhantomData<T>);
-
-// todo check if we can relax it to `dyn Tid<'a> + 'b where 'b:'a`
-// at first glance it should be possible because
-// there should be a reason why trait object is allowed to be covariant over its lifetime
-// and even if it is possible any use case i can imagine feels very artificial
-// on the other hand `dyn Tid<'a> + 'b where 'b:'a`
-// can be subtyped to `dyn Tid<'a> + 'a` on the caller side so this shouldn't even be a problem
-// impl<'a> TidExt<'a> for dyn Tid<'a> + 'a {
-//     #[inline]
-//     fn downcast_ref<'b, T: Tid<'a>>(&'b self) -> Option<&'b T>
-//     where
-//         'a: 'b,
-//     {
-//         // Tid<'a> is implemented only for types with lifetime 'a
-//         // so we can safely cast type back because lifetime invariant is preserved.
-//         if self.self_id() == typeid_of::<T>() {
-//             Some(unsafe { &*(self as *const _ as *const T) })
-//         } else {
-//             None
-//         }
-//     }
-//
-//     #[inline]
-//     fn downcast_mut<'b, T: Tid<'a>>(&'b mut self) -> Option<&'b mut T>
-//     where
-//         'a: 'b,
-//     {
-//         // see downcast_ref
-//         if self.self_id() == typeid_of::<T>() {
-//             Some(unsafe { &mut *(self as *mut _ as *mut T) })
-//         } else {
-//             None
-//         }
-//     }
-// }
 
 impl<'a> dyn Tid<'a> + 'a {
     /// Tries to downcast Self to `T`
@@ -311,7 +275,7 @@ impl<'a> dyn Tid<'a> + 'a {
     ///
     /// ```rust
     /// # use std::any::Any;
-    /// # use better_typeid::{Tid, TidExt};
+    /// # use better_typeid::{Tid, TidAble, TidExt};
     /// #[derive(Tid)]
     /// struct S;
     ///
@@ -356,7 +320,6 @@ macro_rules! stdimpl {
     };
 }
 use std::cell::*;
-use std::ops::Deref;
 use std::rc::*;
 use std::sync::*;
 stdimpl!(Box);

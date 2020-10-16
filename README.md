@@ -8,6 +8,8 @@ and extended version of `Any` trait for types with single lifetime.
 
 For more details see [documentation](https:://docs.rs/better_typeid).
 
+MSRV: 1.41.0-stable
+
 #### License
 
 <sup>

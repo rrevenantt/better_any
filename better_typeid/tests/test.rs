@@ -1,9 +1,6 @@
-#![feature(test)]
-
 use crate::mod2::S7;
 use better_typeid::{impl_tid, type_id, Tid, TidAble, TidExt};
 use std::any::Any;
-use std::hint::black_box;
 
 #[derive(Tid)]
 struct S1(usize);
@@ -96,11 +93,11 @@ fn test_downcast_trait_object() {
 #[test]
 fn test_static() {
     let a = S1(5);
-    let a = black_box(&a as &dyn Tid);
+    let a = &a as &dyn Tid;
     assert_eq!(a.downcast_ref::<S1>().unwrap().0, 5);
 
     let a = S1(5);
-    let a: &dyn Tid = black_box((&a as &dyn Any).into());
+    let a: &dyn Tid = (&a as &dyn Any).into();
     assert_eq!(a.downcast_any_ref::<S1>().unwrap().0, 5);
 }
 
@@ -111,7 +108,7 @@ fn test_simple() {
 
     let s = String::from("test");
     let a = S2(&s);
-    let a = black_box(&a as &dyn Tid);
+    let a = &a as &dyn Tid;
     assert_eq!(a.downcast_ref::<S2>().unwrap().0, "test");
 }
 
