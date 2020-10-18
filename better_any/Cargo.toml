@@ -1,5 +1,5 @@
 [package]
-name = "better_typeid"
+name = "better_any"
 version = "0.1.0"
 authors = ["Konstantin Anisimov <rrevenantt@gmail.com>"]
 homepage = "https://github.com/rrevenantt/better_typeid"
@@ -10,10 +10,8 @@ readme = "README.md"
 keywords = ["Any", "TypeId", "downcast","dynamic dispatch"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
-better_typeid_derive = {path="../better_typeid_derive" }
+better_typeid_derive = "=0.1.0"
 
 [dev-dependencies]
 trybuild = "=1.0"

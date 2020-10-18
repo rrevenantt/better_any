@@ -1,6 +1,6 @@
 #![warn(missing_docs)]
 #![warn(rust_2018_idioms)]
-//! # Better type Id
+//! # Better Any
 //!
 //! Rust RFC for `non_static_type_id` feature has been reverted.
 //! Which means in foreseeable future there will be no built-in way in rust to get type id for non-static type
@@ -63,7 +63,7 @@ use std::marker::PhantomData;
 /// Use it when you can't use derive e.g. for trait object.
 ///
 /// ```rust
-/// # use better_typeid::{TidAble,impl_tid};
+/// # use better_any::{TidAble,impl_tid};
 /// trait Trait<'a>{}
 /// #[impl_tid]
 /// impl<'a> TidAble<'a> for Box<dyn Trait<'a> + 'a>{}
@@ -275,7 +275,7 @@ impl<'a> dyn Tid<'a> + 'a {
     ///
     /// ```rust
     /// # use std::any::Any;
-    /// # use better_typeid::{Tid, TidAble, TidExt};
+    /// # use better_any::{Tid, TidAble, TidExt};
     /// #[derive(Tid)]
     /// struct S;
     ///

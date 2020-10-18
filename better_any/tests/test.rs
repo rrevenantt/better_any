@@ -1,5 +1,5 @@
 use crate::mod2::S7;
-use better_typeid::{impl_tid, type_id, Tid, TidAble, TidExt};
+use better_any::{impl_tid, type_id, Tid, TidAble, TidExt};
 use std::any::Any;
 
 #[derive(Tid)]
@@ -51,7 +51,7 @@ impl<'a> TidAble<'a> for Box<dyn Trait + 'a> {}
 mod mod2 {
     pub use mod1::S7;
     mod mod1 {
-        use better_typeid::{Tid, TidAble, TidExt};
+        use better_any::{Tid, TidAble, TidExt};
 
         #[derive(Tid)]
         pub struct S7<T>(pub T);

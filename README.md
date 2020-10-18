@@ -1,12 +1,12 @@
-# Better_typeid
-[![docs](https://docs.rs/better_typeid/badge.svg)](https://docs.rs/better_typeid)
-[![Crate](https://img.shields.io/crates/v/better_typeid.svg)](https://crates.io/crates/better_typeid)
+# Better_Any
+[![docs](https://docs.rs/better_any/badge.svg)](https://docs.rs/better_any)
+[![Crate](https://img.shields.io/crates/v/better_any.svg)](https://crates.io/crates/better_any)
 
 
 Provides a workaround for absence of `non_static_type_id` feature in Rust 
 and extended version of `Any` trait for types with single lifetime.
 
-For more details see [documentation](https:://docs.rs/better_typeid).
+For more details see [documentation](https:://docs.rs/better_any).
 
 MSRV: 1.41.0-stable
 

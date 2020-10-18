@@ -1,5 +1,5 @@
-use better_typeid::Tid;
-use better_typeid_derive::Tid;
+use better_any::Tid;
+use better_any_derive::Tid;
 struct S3<'a, T>(&'a T);
 unsafe impl<'a, T> TidAble<'a> for S3<'a, T>
 where

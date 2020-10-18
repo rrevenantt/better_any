@@ -1,2 +1,2 @@
 [workspace]
-members = ["better_typeid", "better_typeid_derive"]
+members = ["better_any", "better_typeid_derive"]
