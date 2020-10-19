@@ -10,6 +10,15 @@ readme = "README.md"
 keywords = ["Any", "TypeId", "downcast","dynamic dispatch"]
 edition = "2018"
 
+#[[test]]
+#path = "tests/test.rs"
+#required-features = ["derive"]
+#
+#[features]
+#default = ["any","derive"]
+#any = []
+#derive = ["better_typeid_derive"]
+
 [dependencies]
 better_typeid_derive = "=0.1.0"
 
