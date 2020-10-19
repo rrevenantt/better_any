@@ -46,11 +46,6 @@
 //! Although if you are using `dyn Trait` where `Trait:Tid` all of this wouldn't work,
 //! and you are left with `Tid` only.
 //!
-//! ### Limitations
-//!
-//! You can't get type id of unsized type. Supporting it would make api much more confusing, while
-//! it can be worked around just by wrapping with another type.
-//!
 //! ### Safety
 //!
 //! It is safe because created trait object preserve lifetime information,
@@ -73,7 +68,7 @@ pub use better_typeid_derive::impl_tid;
 ///
 /// It checks if it is safe to implement `Tid` for your struct
 /// Also it adds `:TidAble<'a>` bound on type parameters
-/// unless your type parameter already has **explicit** `'static`
+/// unless your type parameter already has **explicit** `'static` bound
 pub use better_typeid_derive::Tid;
 
 /// This trait indicates that you can substitute this type as a type parameter to
@@ -110,6 +105,9 @@ pub unsafe trait TidAble<'a>: Tid<'a> {
 ///
 /// Use methods from this trait only if `dyn Tid` was created directly from `T` for this particular `T`
 pub trait TidExt<'a> {
+    /// Returns true if type behind self is equal to the type of T.
+    fn is<T: Tid<'a>>(&self) -> bool;
+
     /// Attempts to downcast self to `T` behind reference
     fn downcast_ref<'b, T: Tid<'a>>(&'b self) -> Option<&'b T>;
 
@@ -131,6 +129,10 @@ pub trait TidExt<'a> {
 /// concrete type replaces type parameter. Usually there are better ways to do this like specialization,
 /// but sometimes it can be the only way.
 impl<'a, X: ?Sized + Tid<'a>> TidExt<'a> for X {
+    fn is<T: Tid<'a>>(&self) -> bool {
+        self.self_id() == T::id()
+    }
+
     #[inline]
     fn downcast_ref<'b, T: Tid<'a>>(&'b self) -> Option<&'b T> {
         // Tid<'a> is implemented only for types with lifetime 'a
@@ -206,6 +208,7 @@ unsafe impl<'a, T: ?Sized + TidAble<'a>> Tid<'a> for T {
         adjust_id::<T::Static>()
     }
 
+    #[inline]
     fn id() -> TypeId
     where
         Self: Sized,
@@ -216,13 +219,15 @@ unsafe impl<'a, T: ?Sized + TidAble<'a>> Tid<'a> for T {
 
 // this exists just to make TypeIdAdjuster private so type id difference between
 // `dyn Any` and `dyn Tid` would be guaranteed
+#[inline(always)]
 fn adjust_id<T: ?Sized + Any>() -> TypeId {
     TypeId::of::<TypeIdAdjuster<T>>()
 }
 
 /// Returns type id of `T`
 ///
-/// Use it only if `Tid::id()` is not enough when `T` is not sized
+/// Use it only if `Tid::id()` is not enough when `T` is not sized.
+#[inline]
 pub fn typeid_of<'a, T: ?Sized + TidAble<'a>>() -> TypeId {
     adjust_id::<T::Static>()
 }
@@ -363,6 +368,15 @@ unsafe impl<'a, T: Any> TidAble<'a> for &'a mut T {
 // which is already a proc macro, so there is no much reason to do force everything to declarative macro
 //
 /// Simple version of derive macro to not pull all proc macro dependencies in simple cases
+/// when all structs are not generic
+///
+/// ```rust
+/// use better_any::type_id;
+/// struct S;
+/// type_id!(S);
+/// struct F<'a>(&'a str);
+/// type_id!(F<'a>);
+/// ```
 #[macro_export]
 macro_rules! type_id {
     ($struct: ident) => {
@@ -376,15 +390,16 @@ macro_rules! type_id {
         }
     }; // ($struct: ident < $($type:ident),* >) => {
        //     unsafe impl<'a,$($type:$crate::TidAble<'a>),*> $crate::TidAble<'a> for $struct<$($type,)*> {
-       //         type Static = HygyieneUnique<$($type::Static),*>;
+       //         type Static = HygieneUnique<$($type::Static),*>;
        //     }
        //
-       //     pub struct HygyieneUnique<$($type),*>($(core::marker::PhantomData<$type>),*);
+       //     pub struct HygieneUnique<$($type),*>($(core::marker::PhantomData<$type>),*);
        // };
 }
 
 //todo: not sure if worth it.
 // If only both T and X could be ?Sized it would DRY From impl as well
+// on the other hand it might have problems with type inference
 //
 // unsafe trait Cast<T: Deref>: Deref {
 //     unsafe fn cast(self) -> T;
