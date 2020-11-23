@@ -6,7 +6,7 @@
 Provides a workaround for absence of `non_static_type_id` feature in Rust 
 and extended version of `Any` trait for types with single lifetime.
 
-For more details see [documentation](https:://docs.rs/better_any).
+For more details see [documentation](https://docs.rs/better_any).
 
 MSRV: 1.41.0-stable
 
