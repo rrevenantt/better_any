@@ -1,6 +1,6 @@
 [package]
 name = "better_typeid_derive"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Konstantin Anisimov <rrevenantt@gmail.com>"]
 description = "derive macro part of better_any"
 keywords = ["template", "proc_macro", "procmacro"]

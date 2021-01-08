@@ -2,7 +2,7 @@ extern crate proc_macro;
 use proc_macro::TokenStream;
 
 use quote::quote;
-use syn::export::ToTokens;
+use quote::ToTokens;
 use syn::{parse2, Generics, Type, TypeParamBound};
 
 use proc_macro2::Ident;

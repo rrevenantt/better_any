@@ -1,6 +1,6 @@
 [package]
 name = "better_any"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Konstantin Anisimov <rrevenantt@gmail.com>"]
 homepage = "https://github.com/rrevenantt/better_typeid"
 repository = "https://github.com/rrevenantt/better_typeid"
@@ -20,7 +20,7 @@ edition = "2018"
 #derive = ["better_typeid_derive"]
 
 [dependencies]
-better_typeid_derive = "=0.1.0"
+better_typeid_derive = "=0.1.1"
 
 [dev-dependencies]
 trybuild = "=1.0"
