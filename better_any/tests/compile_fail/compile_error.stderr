@@ -1,0 +1,30 @@
+error[E0495]: cannot infer an appropriate lifetime due to conflicting requirements
+ --> $DIR/compile_error.rs:5:18
+  |
+5 |     downcast_any(any).unwrap()
+  |                  ^^^
+  |
+note: first, the lifetime cannot outlive the lifetime `'a` as defined on the function body at 4:11...
+ --> $DIR/compile_error.rs:4:11
+  |
+4 | fn testlt<'a, 'b>(any: &'a dyn Any) -> &'b i32 {
+  |           ^^
+note: ...so that the expression is assignable
+ --> $DIR/compile_error.rs:5:18
+  |
+5 |     downcast_any(any).unwrap()
+  |                  ^^^
+  = note: expected `&dyn Any`
+             found `&'a (dyn Any + 'static)`
+note: but, the lifetime must be valid for the lifetime `'b` as defined on the function body at 4:15...
+ --> $DIR/compile_error.rs:4:15
+  |
+4 | fn testlt<'a, 'b>(any: &'a dyn Any) -> &'b i32 {
+  |               ^^
+note: ...so that the expression is assignable
+ --> $DIR/compile_error.rs:5:5
+  |
+5 |     downcast_any(any).unwrap()
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  = note: expected `&'b i32`
+             found `&i32`

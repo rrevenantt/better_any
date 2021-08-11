@@ -1,5 +1,5 @@
 use crate::mod2::S7;
-use better_any::{impl_tid, type_id, Tid, TidAble, TidExt};
+use better_any::{impl_tid, tid, type_id, Tid, TidAble, TidExt};
 use std::any::Any;
 
 #[derive(Tid)]
@@ -36,13 +36,16 @@ trait Big<'a>: Tid<'a> {}
 
 impl<'a, T: TraitLT<'a>> Big<'a> for S6<'a, T> {}
 
+struct S6macro<'a, T>(&'a T);
+tid! {impl<'a,T> TidAble<'a> for S6macro<'a,T>}
+
+impl<'a, T: TraitLT<'a>> Big<'a> for S6macro<'a, T> {}
+
 trait Trait2<'a> {}
 
-#[impl_tid]
-impl<'a> TidAble<'a> for dyn Trait2<'a> + 'a {}
+tid! { impl<'a> TidAble<'a> for dyn Trait2<'a> + 'a }
 
-#[impl_tid]
-impl<'a> TidAble<'a> for Box<dyn Trait + 'a> {}
+tid! { impl<'b> TidAble<'b> for Box<dyn Trait + 'b> }
 
 // #[derive(Tid)]
 // struct S6<'a, T>(&'a T)
@@ -83,12 +86,8 @@ fn test_downcast_trait_object() {
     let to = &orig as &dyn T;
     let downcasted = to.downcast_ref::<S>().unwrap();
     assert_eq!(orig.0, downcasted.0);
+    assert!(!to.is::<S2>());
 }
-
-// #[test]
-// fn test_from_dyn() {
-//     doc test
-// }
 
 #[test]
 fn test_static() {
@@ -97,7 +96,7 @@ fn test_static() {
     assert_eq!(a.downcast_ref::<S1>().unwrap().0, 5);
 
     let a = S1(5);
-    let a: &dyn Tid = (&a as &dyn Any).into();
+    let a: &dyn Tid = (&a).into();
     assert_eq!(a.downcast_any_ref::<S1>().unwrap().0, 5);
 }
 

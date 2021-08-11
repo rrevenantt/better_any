@@ -1,4 +1,4 @@
 #[test]
 fn expandtest() {
-    macrotest::expand("tests/expand/*.rs");
+    macrotest::expand_args("tests/expand/*.rs", vec!["--features", "derive"]);
 }
