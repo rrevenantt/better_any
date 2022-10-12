@@ -15,7 +15,7 @@
 //! Feel free to create an issue if you have actual use case where you need this functionality for multiple lifetimes.
 //!
 //! Also it has better downcasting that allows you do downcast not just from `dyn Tid` (like `dyn Any`) but from
-//! any trait object that implements `Tid`.
+//! any trait object that implements [`Tid`].
 //! So there is no more need to extend your traits with` fn to_any(&self)-> &dyn Any`
 //!
 //! MSRV: `1.41.0-stable` (without nightly feature)
@@ -23,7 +23,7 @@
 //! ### Usage
 //!
 //! Basically in places where before you have used `dyn Any` you can use `dyn Tid<'a>`
-//!  - If your type is generic you should derive `Tid` implementation for it with `Tid` derive macro.
+//!  - If your type is generic you should derive `Tid` implementation for it with `tid!` macro or `Tid` derive macro.
 //! Then to retrieve back concrete type `<dyn Tid>::downcast_*` methods should be used.
 //!  - If your type is not generic/implements Any you can create `dyn Tid` from it via any of the available `From` implementations.
 //! Then to retrieve back concrete type `<dyn Tid>::downcast_any_*` methods should be used
@@ -40,17 +40,14 @@
 //!
 //! Unfortunately you can't just use `Tid` everywhere because currently it is impossible
 //! to implement `Tid` for `T:Any` since it would conflict with any other possible `Tid` implementation.
-//! To overcome this limitation there is a `From` impl to go from `dyn Any` to `dyn Tid`
-//! But `Any` and `Tid` deliberately return different type ids because otherwise `Type<'a>` and `Type<'static>`
-//! would be indistinguishable and it would allow to go from `Type<'static>` to `Type<'a>` via `dyn Tid`
-//! which is obviously unsound for invariant and contravariant structs.
+//! To overcome this limitation there is a `From` impl to go from `Box/&/&mut T where T:Any` to `Box/&/&mut dyn Tid`.
 //!
-//! Although if you are using `dyn Trait` where `Trait:Tid` all of this wouldn't work,
+//! Nevertheless if you are using `dyn Trait` where `Trait:Tid` all of this wouldn't work,
 //! and you are left with `Tid` only.
 //!
 //! ### Safety
 //!
-//! It is safe because created trait object preserve lifetime information,
+//! It is safe because created trait object preserves lifetime information,
 //! thus allowing us to safely downcast with proper lifetime.
 //! Otherwise internally it is plain old `Any`.
 use std::any::{Any, TypeId};
@@ -67,6 +64,7 @@ use std::any::{Any, TypeId};
 #[deprecated(since = "0.2", note = "use tid! macro instead")]
 #[cfg(feature = "derive")]
 pub use better_typeid_derive::impl_tid;
+
 /// Derive macro to implement traits from this crate
 ///
 /// It checks if it is safe to implement `Tid` for your struct
@@ -88,10 +86,10 @@ pub use better_typeid_derive::Tid;
 /// Only this trait is actually being implemented on user side.
 /// Other traits are mostly just blanket implementations over X:TidAble<'a>
 ///
-/// Note that this trait interfere with object safety, so you shouldn't use it as a super trait
+/// Note that this trait interferes with object safety, so you shouldn't use it as a super trait
 /// if you are going to make a trait object. Formally it is still object safe,
 /// but you can't make a trait object from it without specifying internal associate type
-/// like: `dyn TidAble<'a,Static=SomeType>` which make this trait object effectively useless.
+/// like: `dyn TidAble<'a,Static=SomeType>` which make such trait object effectively useless.
 ///
 /// Unsafe because safety of this crate relies on correctness of this trait implementation.
 /// There are several safe ways to implement it:
@@ -178,6 +176,7 @@ pub trait TidExt<'a>: Tid<'a> {
         Self: Sized,
     {
         if self.is::<T>() {
+            // can't use `Option` trick here like with `Any`
             let this = core::mem::MaybeUninit::new(self);
             return Some(unsafe { core::mem::transmute_copy(&this) });
         }
@@ -246,19 +245,11 @@ pub trait AnyExt: Any {
     where
         Self: Sized,
     {
-        if this.type_id() == TypeId::of::<T>() {
-            let this = core::mem::MaybeUninit::new(this);
-            // SAFETY: MaybeUninit above has effectively forgotten Self so it is safe to transmute
-            // it's data to our type;
-            // at first it looks like we can just use `mem::forget`, but it has to be used after transmute
-            // and thus between transmute and forget there are two copies of the same data which is bad
-            // if there is some unique(Box,&mut etc) data inside.
-            // I don't think it is currently explicitly defined to be UB but MaybeUninit looks more sound.
-            let t = unsafe { core::mem::transmute_copy::<_, T>(&this) };
-            Some(t)
-        } else {
-            None
+        let temp = &mut Some(this) as &mut dyn Any;
+        if let Some(temp) = AnyExt::downcast_mut::<Option<T>>(temp) {
+            return Some(temp.take().unwrap());
         }
+        None
     }
 }
 impl<T: ?Sized + Any> AnyExt for T {}
@@ -299,8 +290,6 @@ unsafe impl<'a, T: ?Sized + TidAble<'a>> Tid<'a> for T {
     }
 }
 
-// this exists just to make TypeIdAdjuster private so type id difference between
-// `dyn Any` and `dyn Tid` would be guaranteed
 #[inline(always)]
 fn adjust_id<T: ?Sized + Any>() -> TypeId {
     TypeId::of::<T>()
@@ -407,7 +396,15 @@ tid!(impl<'a, T> TidAble<'a> for Arc<T>);
 tid!(impl<'a, T> TidAble<'a> for Mutex<T>);
 tid!(impl<'a, T> TidAble<'a> for RwLock<T>);
 
-tid! {impl<'a, T> TidAble<'a> for Option<T>}
+// tid! {impl<'a, T> TidAble<'a> for Option<T>}
+const _: () = {
+    use core::marker::PhantomData;
+    type __Alias<'a, T> = Option<T>;
+    pub struct __TypeIdGenerator<'a, T: ?Sized>(PhantomData<&'a ()>, PhantomData<T>);
+    unsafe impl<'a, T: TidAble<'a>> TidAble<'a> for __Alias<'a, T> {
+        type Static = __TypeIdGenerator<'static, T::Static>;
+    }
+};
 
 tid! {impl<'a, T> TidAble<'a> for Vec<T>}
 
@@ -449,6 +446,7 @@ tid! { impl<'a> TidAble<'a> for dyn Tid<'a> + 'a }
 ///
 #[macro_export]
 macro_rules! tid {
+
     ($struct: ident) => {
         unsafe impl<'a> $crate::TidAble<'a> for $struct {
             type Static = $struct;
@@ -464,6 +462,7 @@ macro_rules! tid {
         $crate::tid!{ inner impl <$lt $(,$param)* static> $tr<$lt2> for $($struct)+  }
     };
 
+    //todo change macro to use attributes instead of 'static
     // inner submacro is used to check/fix/error on whether correct trait is being implemented
     (inner impl <$lt:lifetime $(,$param:ident)* static $( $static_param:ident)* > Tid<$lt2:lifetime> for $($struct: tt)+ ) => {
         $crate::tid!{ inner impl <$lt $(,$param)* static $( $static_param)*> TidAble<$lt2> for $($struct)+  }
@@ -588,8 +587,6 @@ pub use tid as type_id;
 //     ($($tokens:tt)+) => { $crate::tid!{ $($tokens)+ } };
 // }
 
+/// unstable features that require nightly, use on your own risk
 #[cfg(feature = "nightly")]
-pub use nightly::*;
-
-#[cfg(feature = "nightly")]
-mod nightly;
+pub mod nightly;

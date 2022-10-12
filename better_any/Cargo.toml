@@ -1,6 +1,6 @@
 [package]
 name = "better_any"
-version = "0.2.0-dev.1"
+version = "0.2.0"
 authors = ["Konstantin Anisimov <rrevenantt@gmail.com>"]
 homepage = "https://github.com/rrevenantt/better_typeid"
 repository = "https://github.com/rrevenantt/better_typeid"
@@ -43,3 +43,6 @@ required-features = ["nightly"]
 name = "compile_fail"
 path = "tests/compile_fail.rs"
 required-features = ["nightly"]
+
+[package.metadata.docs.rs]
+all-features = true

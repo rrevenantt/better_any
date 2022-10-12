@@ -111,15 +111,19 @@ fn get_callable_trait_object<T: ?Sized + DynMetadataType>(
     core::ptr::from_raw_parts(&(), metadata)
 }
 
-///```rust
-/// # use better_any::{downcast_tid, DowncastExt,Tid,tid};
+/// Downcasts any kind of fat pointer type which vtable corresponds to a trait with `Tid` bound.
+/// For example `Rc<RefCell<dyn Tid<'_>>>>` can be downcasted with this method
+///
+/// ```rust
+/// # use better_any::nightly::{downcast_tid, DowncastExt};
+/// # use better_any::{Tid,tid};
 /// # use std::fmt::Debug;
 /// struct Test(i32);
 /// tid!(Test);
 /// let a = Box::new(Test(5i32));
 /// let any = a as Box<dyn Tid>;
-/// let result: Box<Test> = downcast_tid(any).unwrap();
-/// assert_eq!(a.0, result.0);
+/// let result: Box<Test> = downcast_tid(any).unwrap_or_else(|_| panic!("error"));
+/// assert_eq!(5, result.0);
 ///```
 pub fn downcast_tid<'a, From: IntoRawPtr, To: IntoRawPtr<Lifetime = From::Lifetime>>(
     f: From,
@@ -148,8 +152,11 @@ where
     }
 }
 
+/// Downcasts any kind of fat pointer type which vtable corresponds to a trait with `Any` bound.
+/// For example `Rc<RefCell<dyn Any>>>` can be downcasted with this method
+///
 ///```rust
-/// # use better_any::{downcast_any, DowncastExt};
+/// # use better_any::nightly::{downcast_any, DowncastExt};
 /// # use std::any::Any;
 /// # use std::fmt::Debug;
 /// let a = 5i32;
@@ -197,7 +204,7 @@ pub trait DowncastExt: Sized + IntoRawPtr {
     /// to `T` which is thin version to that pointer with concrete pointee type.
     ///
     /// ```rust
-    /// # use better_any::{downcast_any, DowncastExt};
+    /// # use better_any::nightly::{downcast_any, DowncastExt};
     /// # use std::any::Any;
     /// # use std::cell::{Cell, RefCell};
     /// # use std::fmt::Debug;
@@ -237,7 +244,7 @@ impl<T: IntoRawPtr> DowncastExt for T where T::Pointee: DynMetadataType {}
 
 /// Checks that wrong lifetime doesn't work
 /// ```rust,compile_fail
-/// # use better_any::{downcast_any, DowncastExt};
+/// # use better_any::nightly::{downcast_any, DowncastExt};
 /// # use std::any::Any;
 /// # use std::fmt::Debug;
 /// let a = 5i32;
