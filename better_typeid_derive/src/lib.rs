@@ -97,7 +97,7 @@ fn create_impl(
     // no generics
     if generics.lt_token.is_none() {
         let tokens = quote! {
-            unsafe impl<'a> #hlq TidAble<'a> for #type_{
+            unsafe impl<'a> #hlq ::better_any::TidAble<'a> for #type_{
                 type Static = #type_;
             }
         };
@@ -138,9 +138,10 @@ fn create_impl(
                     substitute_types.push(ident.to_token_stream())
                 } else {
                     substitute_types.push(quote! {#ident::Static});
-                    where_with_bounds
-                        .predicates
-                        .push(syn::parse2(quote! {#ident: #hlq TidAble<#lifetime>}).unwrap());
+                    where_with_bounds.predicates.push(
+                        syn::parse2(quote! {#ident: #hlq ::better_any::TidAble<#lifetime>})
+                            .unwrap(),
+                    );
                 }
             }
         }
@@ -163,7 +164,7 @@ fn create_impl(
     let temp_struct_ident = quote::format_ident!("__{}_should_never_exist", name);
     let tokens = if lifetime_count == 1 {
         quote! {
-            unsafe impl<#type_params_wo_defaults> #hlq TidAble<#lifetime> for #type_
+            unsafe impl<#type_params_wo_defaults> #hlq ::better_any::TidAble<#lifetime> for #type_
             #where_with_bounds {
                 type Static = #temp_struct_ident<#(#substitute_types,)* #(#const_param_names,)*>;
             }
@@ -171,7 +172,7 @@ fn create_impl(
     } else {
         // lifetime_count == 0
         quote! {
-            unsafe impl<#lifetime,#type_params_wo_defaults> #hlq TidAble<#lifetime> for #type_
+            unsafe impl<#lifetime,#type_params_wo_defaults> #hlq ::better_any::TidAble<#lifetime> for #type_
             #where_with_bounds {
                 type Static = #temp_struct_ident<#(#substitute_types,)* #(#const_param_names,)*>;
             }
