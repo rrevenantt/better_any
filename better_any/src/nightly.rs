@@ -1,9 +1,12 @@
 use crate::Tid;
-use std::any::Any;
-use std::ops::CoerceUnsized;
-use std::ptr::{DynMetadata, Pointee};
-use std::rc::Rc;
-use std::sync::Arc;
+use core::any::Any;
+use core::ops::CoerceUnsized;
+use core::ptr::{DynMetadata, Pointee};
+use alloc::rc::Rc;
+use alloc::sync::Arc;
+
+#[cfg(not(feature="std"))]
+use crate::no_std::prelude::*;
 
 // todo support allocator for heap types
 /// Implemented for types that can be converted to and from raw painter
