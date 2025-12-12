@@ -1,6 +1,6 @@
 [package]
 name = "better_typeid_derive"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Konstantin Anisimov <rrevenantt@gmail.com>"]
 description = "derive macro part of better_any"
 keywords = ["template", "proc_macro", "procmacro"]
@@ -13,5 +13,5 @@ proc-macro = true
 [dependencies]
 quote = "1"
 proc-macro2 = "1.0"
-syn = { version="1.0", features=["full"] }
+syn = { version = "1.0", features = ["full"] }
 
